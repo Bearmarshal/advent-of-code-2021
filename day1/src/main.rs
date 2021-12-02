@@ -12,10 +12,7 @@ fn main() -> std::io::Result<()> {
 
 fn part1(input: &str) {
     let mut lines = input.lines();
-    let mut prev_depth: i64 = lines
-            .next().unwrap()
-            .trim()
-            .parse().unwrap();
+    let mut prev_depth: i64 = lines.next().unwrap().trim().parse().unwrap();
     let mut number_of_depth_increases = 0;
 
     for line in lines {

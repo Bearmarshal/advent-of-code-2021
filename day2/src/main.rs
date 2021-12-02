@@ -1,6 +1,6 @@
+use regex::Regex;
 use std::fs::File;
 use std::io::prelude::*;
-use regex::Regex;
 
 fn main() -> std::io::Result<()> {
     let mut input_file = File::open("input.txt")?;
@@ -15,7 +15,7 @@ fn part1(input: &str) {
     let regex = Regex::new(r"forward (?P<forward>\d+)|down (?P<down>\d+)|up (?P<up>\d+)").unwrap();
     let mut distance = 0;
     let mut depth = 0;
-    
+
     for capture in regex.captures_iter(input) {
         if let Some(forward) = capture.name("forward") {
             distance += forward.as_str().parse::<i32>().unwrap();
@@ -34,7 +34,7 @@ fn part2(input: &str) {
     let mut distance = 0;
     let mut depth = 0;
     let mut aim = 0;
-    
+
     for capture in regex.captures_iter(input) {
         if let Some(forward) = capture.name("forward") {
             let speed = forward.as_str().parse::<i32>().unwrap();
@@ -46,6 +46,6 @@ fn part2(input: &str) {
             aim -= up.as_str().parse::<i32>().unwrap();
         }
     }
-    
+
     println!("Part 2: {}", distance * depth);
 }
