@@ -1,8 +1,7 @@
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::env;
 use std::fs::File;
 use std::io::prelude::*;
-use std::ops::Add;
 
 fn main() -> std::io::Result<()> {
     let mut input_file = File::open(match env::args().skip(1).next() {
@@ -49,5 +48,47 @@ fn part1(input: &str) {
 }
 
 fn part2(input: &str) {
-    println!("Part 2: {}", "");
+    let mut height_map = input
+        .lines()
+        .map(|line| {
+            line.trim()
+                .chars()
+                .map(|c| c.to_digit(10).unwrap())
+                .enumerate()
+        })
+        .enumerate()
+        .flat_map(move |(y, x_heights)| x_heights.map(move |(x, height)| ((x + 1, y + 1), height)))
+        .collect::<HashMap<(usize, usize), u32>>();
+    let mut coordinates_to_check = VecDeque::<(usize, usize)>::new();
+    let mut basin_sizes = Vec::<i32>::new();
+
+    while !height_map.is_empty() {
+        let (y, x) = match height_map.keys().next().unwrap() {
+            (y, x) => (*y, *x),
+        };
+        let height = height_map.remove(&(y, x)).unwrap();
+
+        if height < 9 {
+            let mut basin_size = 0;
+            coordinates_to_check.push_back((y, x));
+            while !coordinates_to_check.is_empty() {
+                let (y, x) = coordinates_to_check.pop_front().unwrap();
+                basin_size += 1;
+                for coordinates in [(y - 1, x), (y, x - 1), (y, x + 1), (y + 1, x)] {
+                    if let Some(height) = height_map.remove(&coordinates) {
+                        if height < 9 {
+                            coordinates_to_check.push_back(coordinates);
+                        }
+                    }
+                }
+            }
+            basin_sizes.push(basin_size);
+        }
+    }
+    basin_sizes.sort();
+
+    println!(
+        "Part 2: {}",
+        basin_sizes.iter().rev().take(3).fold(1, |a, b| a * b)
+    );
 }
