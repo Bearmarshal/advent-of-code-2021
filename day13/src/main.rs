@@ -1,6 +1,6 @@
 use lazy_static::lazy_static;
 use regex::Regex;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::env;
 use std::fs::File;
 use std::io::prelude::*;
@@ -23,10 +23,10 @@ fn part1(input: &str) {
         static ref FOLD_REGEX: Regex =
             Regex::new(r"fold along (?P<axis>[xy])=(?P<coordinate>\d+)").unwrap();
     }
-    let (dots, folds) = input.split_once("\n\n").unwrap();
+    let (dot_section, fold_section) = input.split_once("\n\n").unwrap();
 
-    let mut paper = DOT_REGEX
-        .captures_iter(dots)
+    let mut dots = DOT_REGEX
+        .captures_iter(dot_section)
         .map(|capture| {
             (
                 capture.name("y").unwrap().as_str().parse().unwrap(),
@@ -35,7 +35,7 @@ fn part1(input: &str) {
         })
         .collect::<HashSet<(i32, i32)>>();
 
-    for capture in FOLD_REGEX.captures_iter(folds).take(1) {
+    for capture in FOLD_REGEX.captures_iter(fold_section).take(1) {
         let coordinate = capture
             .name("coordinate")
             .unwrap()
@@ -44,7 +44,7 @@ fn part1(input: &str) {
             .unwrap();
         match capture.name("axis").unwrap().as_str() {
             "y" => {
-                paper = paper
+                dots = dots
                     .into_iter()
                     .filter_map(|(y, x)| {
                         if y < coordinate {
@@ -58,7 +58,7 @@ fn part1(input: &str) {
                     .collect()
             }
             "x" => {
-                paper = paper
+                dots = dots
                     .into_iter()
                     .filter_map(|(y, x)| {
                         if x < coordinate {
@@ -75,7 +75,7 @@ fn part1(input: &str) {
         }
     }
 
-    println!("Part 1: {}", paper.len());
+    println!("Part 1: {}", dots.len());
 }
 
 fn part2(input: &str) {
@@ -84,10 +84,10 @@ fn part2(input: &str) {
         static ref FOLD_REGEX: Regex =
             Regex::new(r"fold along (?P<axis>[xy])=(?P<coordinate>\d+)").unwrap();
     }
-    let (dots, folds) = input.split_once("\n\n").unwrap();
+    let (dot_section, fold_section) = input.split_once("\n\n").unwrap();
 
-    let mut paper = DOT_REGEX
-        .captures_iter(dots)
+    let mut dots = DOT_REGEX
+        .captures_iter(dot_section)
         .map(|capture| {
             (
                 capture.name("y").unwrap().as_str().parse().unwrap(),
@@ -96,7 +96,7 @@ fn part2(input: &str) {
         })
         .collect::<HashSet<(usize, usize)>>();
 
-    for capture in FOLD_REGEX.captures_iter(folds) {
+    for capture in FOLD_REGEX.captures_iter(fold_section) {
         let coordinate = capture
             .name("coordinate")
             .unwrap()
@@ -105,7 +105,7 @@ fn part2(input: &str) {
             .unwrap();
         match capture.name("axis").unwrap().as_str() {
             "y" => {
-                paper = paper
+                dots = dots
                     .into_iter()
                     .filter_map(|(y, x)| {
                         if y < coordinate {
@@ -119,7 +119,7 @@ fn part2(input: &str) {
                     .collect()
             }
             "x" => {
-                paper = paper
+                dots = dots
                     .into_iter()
                     .filter_map(|(y, x)| {
                         if x < coordinate {
@@ -138,14 +138,21 @@ fn part2(input: &str) {
 
     let mut y_max = 0;
     let mut x_max = 0;
-    for (y, x) in &paper {
+    for (y, x) in &dots {
         y_max = usize::max(y_max, *y);
         x_max = usize::max(x_max, *x);
     }
-    let mut paper_grid = vec![vec![' ' as u8; x_max + 1]; y_max + 1];
-    for (y, x) in paper {
-        paper_grid[y][x] = '#' as u8;
+    let mut paper = vec![vec![' ' as u8; x_max + 1]; y_max + 1];
+    for (y, x) in dots {
+        paper[y][x] = '#' as u8;
     }
 
-    println!("Part 2: {}", paper_grid.into_iter().fold(String::from(""), move |previous, line| previous + "\n" + &String::from_utf8(line).unwrap()))
+    println!(
+        "Part 2: {}",
+        paper
+            .into_iter()
+            .fold(String::from(""), move |previous, line| previous
+                + "\n"
+                + &String::from_utf8(line).unwrap())
+    )
 }
