@@ -59,7 +59,9 @@ fn part1(input: &str) {
                 }
                 let next_cost = path_cost + risk_map[adjacent_y][adjacent_x];
                 let next_position = (adjacent_y, adjacent_x);
-                if path_costs.contains_key(&next_position) && next_cost >= path_costs[&next_position] {
+                if path_costs.contains_key(&next_position)
+                    && next_cost >= path_costs[&next_position]
+                {
                     continue;
                 }
                 path_costs.insert(next_position, next_cost);
@@ -118,9 +120,17 @@ fn part2(input: &str) {
                 if !(adjacent_y == y) ^ (adjacent_x == x) {
                     continue;
                 }
-                let next_cost = path_cost + (risk_map[adjacent_y % original_y_max][adjacent_x % original_x_max] + (adjacent_y / original_y_max) as u32 + (adjacent_x / original_x_max) as u32 - 1) % 9 + 1;
+                let next_cost = path_cost
+                    + (risk_map[adjacent_y % original_y_max][adjacent_x % original_x_max]
+                        + (adjacent_y / original_y_max) as u32
+                        + (adjacent_x / original_x_max) as u32
+                        - 1)
+                        % 9
+                    + 1;
                 let next_position = (adjacent_y, adjacent_x);
-                if path_costs.contains_key(&next_position) && next_cost >= path_costs[&next_position] {
+                if path_costs.contains_key(&next_position)
+                    && next_cost >= path_costs[&next_position]
+                {
                     continue;
                 }
                 path_costs.insert(next_position, next_cost);
