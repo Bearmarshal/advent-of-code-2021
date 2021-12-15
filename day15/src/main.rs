@@ -179,5 +179,5 @@ fn heuristic(start: &(usize, usize), goal: &(usize, usize)) -> u32 {
     } else {
         goal.0 - start.0
     };
-    usize::max(dy, dx) as u32
+    (dy + dx) as u32
 }
