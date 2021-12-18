@@ -103,11 +103,11 @@ enum Split {
 }
 
 trait SnailfishNumber {
-    fn explode(&self, self_box: &mut Box<dyn SnailfishNumber>, recursion_depth: u32) -> Explosion;
+    fn explode(&mut self, self_box: &mut Box<dyn SnailfishNumber>, recursion_depth: u32) -> Explosion;
     fn value(&self) -> Option<i32>;
-    fn add_to_leftmost(&self, value: i32);
-    fn add_to_rightmost(&self, value: i32);
-    fn split(&self, self_box: &mut Box<dyn SnailfishNumber>) -> Split;
+    fn add_to_leftmost(&mut self, value: i32);
+    fn add_to_rightmost(&mut self, value: i32);
+    fn split(&mut self, self_box: &mut Box<dyn SnailfishNumber>) -> Split;
 }
 
 struct RegularNumber {
@@ -121,7 +121,7 @@ impl RegularNumber {
 }
 
 impl SnailfishNumber for RegularNumber {
-    fn explode(&self, self_box: &mut Box<dyn SnailfishNumber>, recursion_depth: u32) -> Explosion {
+    fn explode(&mut self, _self_box: &mut Box<dyn SnailfishNumber>, _recursion_depth: u32) -> Explosion {
         Explosion::None
     }
 
@@ -129,15 +129,15 @@ impl SnailfishNumber for RegularNumber {
         Some(self.value)
     }
 
-    fn add_to_leftmost(&self, value: i32) {
+    fn add_to_leftmost(&mut self, value: i32) {
         self.value += value;
     }
 
-    fn add_to_rightmost(&self, value: i32) {
+    fn add_to_rightmost(&mut self, value: i32) {
         self.value += value;
     }
 
-    fn split(&self, self_box: &mut Box<dyn SnailfishNumber>) -> Split {
+    fn split(&mut self, self_box: &mut Box<dyn SnailfishNumber>) -> Split {
         if self.value >= 10 {
             *self_box = Pair::boxed(
                 RegularNumber::boxed(self.value / 2),
@@ -162,7 +162,7 @@ impl Pair {
 }
 
 impl SnailfishNumber for Pair {
-    fn explode(&self, self_box: &mut Box<dyn SnailfishNumber>, recursion_depth: u32) -> Explosion {
+    fn explode(&mut self, self_box: &mut Box<dyn SnailfishNumber>, recursion_depth: u32) -> Explosion {
         if recursion_depth >= 4 {
             if let (Some(left_value), Some(right_value)) = (self.left.value(), self.right.value()) {
                 *self_box = RegularNumber::boxed(0);
@@ -197,15 +197,15 @@ impl SnailfishNumber for Pair {
         None
     }
 
-    fn add_to_leftmost(&self, value: i32) {
+    fn add_to_leftmost(&mut self, value: i32) {
         self.left.add_to_leftmost(value);
     }
 
-    fn add_to_rightmost(&self, value: i32) {
+    fn add_to_rightmost(&mut self, value: i32) {
         self.right.add_to_rightmost(value);
     }
 
-    fn split(&self, self_box: &mut Box<dyn SnailfishNumber>) -> Split {
+    fn split(&mut self, _self_box: &mut Box<dyn SnailfishNumber>) -> Split {
         match self.left.split(&mut self.left) {
             Split::Happened => Split::Happened,
             Split::None => self.right.split(&mut self.right),
