@@ -117,10 +117,27 @@ fn part1(input: &str) {
                     .collect::<HashSet<Coordinate3D>>()
             }) {
                 for rotated_coordinate in rotated_coordinates.iter() {
-                    for absolute_coordinate in scanner.beacons.iter() {
+                    'next_comparison: for absolute_coordinate in scanner.beacons.iter() {
                         let offset = absolute_coordinate - rotated_coordinate;
                         let offset_set = &rotated_coordinates + offset;
-                        let overlap_count = scanner.beacons.intersection(&offset_set).count();
+
+                        //let overlap_count = scanner.beacons.intersection(&offset_set).count();
+                        let mut overlap_count = 0;
+                        for absolute_coordinate in scanner.beacons.iter() {
+                            if offset_set.contains(absolute_coordinate) {
+                                overlap_count += 1;
+                            } else {
+                                let [ox, oy, oz] = offset.0;
+                                let [ax, ay, az] = absolute_coordinate.0;
+                                if (ox - 1000..=ox + 1000).contains(&ax)
+                                    && (oy - 1000..=oy + 1000).contains(&ay)
+                                    && (oz - 1000..=oz + 1000).contains(&az)
+                                {
+                                    continue 'next_comparison;
+                                }
+                            }
+                        }
+
                         if overlap_count >= 12 {
                             resolved_set.insert(Scanner {
                                 id: *id,
@@ -190,9 +207,15 @@ impl Coordinate3D {
 
     fn normalise(&mut self) {
         let [mut x, mut y, mut z] = self.0;
-        if x > y {swap(&mut x, &mut y)}
-        if x > z {swap(&mut x, &mut z)}
-        if y > z {swap(&mut y, &mut z)}
+        if x > y {
+            swap(&mut x, &mut y)
+        }
+        if x > z {
+            swap(&mut x, &mut z)
+        }
+        if y > z {
+            swap(&mut y, &mut z)
+        }
         *self = Self([x, y, z]);
     }
 }
@@ -276,7 +299,12 @@ impl Scanner {
             }
         }
         let num_lost_inner_vectors = beacons.len() * (beacons.len() - 1) / 2 - inner_vectors.len();
-        if num_lost_inner_vectors != 0 { println!("Warning: {:?} inner vectors lost from scanner {} due to shadowing", num_lost_inner_vectors, id); }
+        if num_lost_inner_vectors != 0 {
+            println!(
+                "Warning: {:?} inner vectors lost from scanner {} due to shadowing",
+                num_lost_inner_vectors, id
+            );
+        }
 
         Self {
             id,
