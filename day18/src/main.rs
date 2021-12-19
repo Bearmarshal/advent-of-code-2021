@@ -1,8 +1,7 @@
-use lazy_static::lazy_static;
-use regex::Regex;
 use std::env;
 use std::fs::File;
 use std::io::prelude::*;
+use std::ops::Add;
 use std::str::Chars;
 
 fn main() -> std::io::Result<()> {
@@ -18,85 +17,43 @@ fn main() -> std::io::Result<()> {
 }
 
 fn part1(input: &str) {
-    let lines = input.lines();
+    let magnitude = input
+        .lines()
+        .map(|line| decode(&mut line.trim().chars()))
+        .reduce(SnailfishNumber::add)
+        .unwrap()
+        .magnitude();
 
-    println!("Part 1: {}", "");
+    println!("Part 1: {}", magnitude);
 }
 
 fn part2(input: &str) {
-    let mut bit_reader = BitReader::new(input.trim());
-
-    println!("Part 2: {}", "");
-}
-
-#[derive(Debug)]
-struct BitReader<'a> {
-    hex_chars: Chars<'a>,
-    leftover_bits: u64,
-    num_leftover_bits: usize,
-}
-
-impl BitReader<'_> {
-    fn new<'a>(hex_string: &'a str) -> BitReader<'a> {
-        BitReader {
-            hex_chars: hex_string.chars(),
-            leftover_bits: 0,
-            num_leftover_bits: 0,
+    let snailfish_numbers = input
+        .lines()
+        .map(|line| decode(&mut line.trim().chars()))
+        .collect::<Vec<_>>();
+    let mut magnitude_max = 0;
+    for (i, first_number) in snailfish_numbers.iter().enumerate() {
+        for (j, second_number) in snailfish_numbers.iter().enumerate() {
+            if i == j {
+                continue;
+            }
+            magnitude_max = *[
+                magnitude_max,
+                (first_number.clone() + second_number.clone()).magnitude(),
+                (second_number.clone() + first_number.clone()).magnitude(),
+            ]
+            .iter()
+            .max()
+            .unwrap();
         }
     }
-
-    fn get(&mut self, num_bits: usize) -> u64 {
-        while self.num_leftover_bits < num_bits {
-            self.leftover_bits <<= 4;
-            self.leftover_bits |= self.hex_chars.next().unwrap().to_digit(16).unwrap() as u64;
-            self.num_leftover_bits += 4;
-        }
-        self.num_leftover_bits -= num_bits;
-        let value = self.leftover_bits >> self.num_leftover_bits;
-        self.leftover_bits &= (1 << self.num_leftover_bits) - 1;
-        return value;
-    }
-}
-
-fn decode_version_sum(bit_reader: &mut BitReader) -> (u64, u64) {
-    let mut version_sum = bit_reader.get(3);
-    let mut packet_size = 6;
-    match bit_reader.get(3) {
-        4 => {
-            while bit_reader.get(1) != 0 {
-                bit_reader.get(4);
-                packet_size += 5;
-            }
-            bit_reader.get(4);
-            packet_size += 5;
-        }
-        _ => match bit_reader.get(1) {
-            0 => {
-                let mut length = bit_reader.get(15);
-                packet_size += 1 + 15 + length;
-                while length > 0 {
-                    let (sum, size) = decode_version_sum(bit_reader);
-                    version_sum += sum;
-                    length -= size;
-                }
-            }
-            1 => {
-                packet_size += 1 + 11;
-                for _ in 0..bit_reader.get(11) {
-                    let (sum, size) = decode_version_sum(bit_reader);
-                    version_sum += sum;
-                    packet_size += size;
-                }
-            }
-            _ => panic!(),
-        },
-    }
-    return (version_sum, packet_size);
+    println!("Part 2: {}", magnitude_max);
 }
 
 enum Explosion {
     None,
-    Ongoing(Option<i32>, Option<i32>),
+    Ongoing(Option<u32>, Option<u32>),
 }
 
 enum Split {
@@ -104,8 +61,9 @@ enum Split {
     Happened,
 }
 
+#[derive(Clone)]
 enum SnailfishNumber {
-    RegularNumber(i32),
+    RegularNumber(u32),
     Pair(Box<SnailfishNumber>, Box<SnailfishNumber>),
 }
 
@@ -143,21 +101,21 @@ impl SnailfishNumber {
         }
     }
 
-    fn value(&self) -> Option<i32> {
+    fn value(&self) -> Option<u32> {
         match self {
             SnailfishNumber::RegularNumber(value) => Some(*value),
             SnailfishNumber::Pair(_, _) => None,
         }
     }
 
-    fn add_to_leftmost(&mut self, value: i32) {
+    fn add_to_leftmost(&mut self, value: u32) {
         match self {
             SnailfishNumber::RegularNumber(own_value) => *own_value += value,
             SnailfishNumber::Pair(left, _) => left.add_to_leftmost(value),
         }
     }
 
-    fn add_to_rightmost(&mut self, value: i32) {
+    fn add_to_rightmost(&mut self, value: u32) {
         match self {
             SnailfishNumber::RegularNumber(own_value) => *own_value += value,
             SnailfishNumber::Pair(_, right) => right.add_to_rightmost(value),
@@ -180,43 +138,46 @@ impl SnailfishNumber {
             },
         }
     }
+
+    fn magnitude(self) -> u32 {
+        match self {
+            SnailfishNumber::RegularNumber(value) => value,
+            SnailfishNumber::Pair(left, right) => 3 * left.magnitude() + 2 * right.magnitude(),
+        }
+    }
+}
+
+impl Add for SnailfishNumber {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self {
+        let mut output = SnailfishNumber::Pair(Box::new(self), Box::new(rhs));
+        loop {
+            if let Explosion::Ongoing(_, _) = output.explode(0) {
+                continue;
+            } else if let Split::Happened = output.split() {
+                continue;
+            } else {
+                break output;
+            }
+        }
+    }
 }
 
 fn decode(snailfish_chars: &mut Chars) -> SnailfishNumber {
-    lazy_static! {
-        static ref TOKEN_REGEX: Regex =
-            Regex::new(r"[\[\],0-9]").unwrap();
-    }
-
     match snailfish_chars.next() {
-        Some('[') => todo!(),
-        Some(_) => todo!(),
-        None => todo!(),
+        Some('[') => {
+            let first = decode(snailfish_chars);
+            if snailfish_chars.next() != Some(',') {
+                panic!()
+            }
+            let second = decode(snailfish_chars);
+            if snailfish_chars.next() != Some(']') {
+                panic!()
+            }
+            SnailfishNumber::Pair(Box::new(first), Box::new(second))
+        }
+        Some(digit_char) => SnailfishNumber::RegularNumber(digit_char.to_digit(10).unwrap()),
+        None => panic!(),
     }
 }
-
-// fn decode_subpackets(bit_reader: &mut BitReader) -> (Vec<Box<dyn SnailfishNumber>>, u64) {
-//     let mut subpackets = Vec::new();
-//     let mut subpackets_size = 1;
-//     match bit_reader.get(1) {
-//         0 => {
-//             let mut length = bit_reader.get(15);
-//             subpackets_size += 15 + length;
-//             while length > 0 {
-//                 let (subpacket, size) = decode(bit_reader);
-//                 subpackets.push(subpacket);
-//                 length -= size;
-//             }
-//         }
-//         1 => {
-//             subpackets_size += 11;
-//             for _ in 0..bit_reader.get(11) {
-//                 let (subpacket, size) = decode(bit_reader);
-//                 subpackets.push(subpacket);
-//                 subpackets_size += size;
-//             }
-//         }
-//         _ => panic!(),
-//     }
-//     (subpackets, subpackets_size)
-// }
