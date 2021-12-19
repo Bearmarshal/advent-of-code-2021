@@ -4,7 +4,6 @@ use std::collections::HashMap;
 use std::env;
 use std::fs::File;
 use std::io::prelude::*;
-use std::iter;
 use std::mem;
 
 fn main() -> std::io::Result<()> {
@@ -31,7 +30,7 @@ fn part1(input: &str) {
         let mut y1 = capture["y1"].parse::<i32>().unwrap();
         let mut x2 = capture["x2"].parse::<i32>().unwrap();
         let mut y2 = capture["y2"].parse::<i32>().unwrap();
-        
+
         if x1 == x2 {
             if y1 > y2 {
                 mem::swap(&mut y1, &mut y2);
@@ -65,22 +64,61 @@ fn part2(input: &str) {
         let x2 = capture["x2"].parse::<i32>().unwrap();
         let y2 = capture["y2"].parse::<i32>().unwrap();
 
-        assert!(!(x1 == x2 && y1 == y2));
-        let x_range = if x1 == x2 { Box::new(iter::repeat(x1)) } else { true_inclusive_range(x1, x2) };
-        let y_range = if y1 == y2 { Box::new(iter::repeat(y1)) } else { true_inclusive_range(y1, y2) };
-        
-        for (x, y) in x_range.zip(y_range) {
+        for (x, y) in Line2dIter::new((x1, y1), (x2, y2)) {
             *vents.entry((x, y)).or_insert(0) += 1;
         }
     }
-    
+
     println!("Part 2: {}", vents.values().filter(|v| **v > 1).count());
 }
 
-fn true_inclusive_range(a: i32, b: i32) -> Box<dyn Iterator<Item = i32>> {
-    if a > b {
-        Box::new((b..=a).rev())
-    } else {
-        Box::new(a..=b)
+struct Line2dIter {
+    x0: i32,
+    y0: i32,
+    dx: i32,
+    dy: i32,
+    at: i32,
+}
+
+impl Line2dIter {
+    pub fn new(p1: (i32, i32), p2: (i32, i32)) -> Line2dIter {
+        let (x1, y1) = p1;
+        let (x2, y2) = p2;
+
+        Line2dIter {
+            x0: x1,
+            y0: y1,
+            dx: x2 - x1,
+            dy: y2 - y1,
+            at: -1,
+        }
+    }
+}
+
+impl Iterator for Line2dIter {
+    type Item = (i32, i32);
+
+    fn next(&mut self) -> Option<(i32, i32)> {
+        self.at += 1;
+        if self.at > i32::max(self.dx.abs(), self.dy.abs()) {
+            None
+        } else {
+            if self.dx.abs() == self.dy.abs() {
+                Some((
+                    self.x0 + self.at * self.dx.signum(),
+                    self.y0 + self.at * self.dy.signum(),
+                ))
+            } else if self.dx.abs() > self.dy.abs() {
+                Some((
+                    self.x0 + self.at * self.dx.signum(),
+                    self.y0 + self.at * self.dy / self.dx.abs(),
+                ))
+            } else {
+                Some((
+                    self.x0 + self.at * self.dx / self.dy.abs(),
+                    self.y0 + self.at * self.dy.signum(),
+                ))
+            }
+        }
     }
 }
