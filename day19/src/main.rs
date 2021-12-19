@@ -21,6 +21,7 @@ fn main() -> std::io::Result<()> {
 
 fn part1(input: &str) {
     lazy_static! {
+        static ref EMPTY_LINE_REGEX: Regex = Regex::new(r"\r?\n\r?\n").unwrap();
         static ref SCANNER_REGEX: Regex = Regex::new(r"--- scanner (?P<scanner>\d+) ---").unwrap();
         static ref BEACON_REGEX: Regex = Regex::new(r"(-?\d+),(-?\d+),(-?\d+)").unwrap();
     }
@@ -60,7 +61,7 @@ fn part1(input: &str) {
         rotation_sets.push(HashSet::<Coordinate3D>::new())
     }
 
-    let mut scanner_data_blocks = input.split("\n\n");
+    let mut scanner_data_blocks = EMPTY_LINE_REGEX.split(input);
     let mut scanner = Scanner {
         id: 0,
         position: Coordinate3D([0, 0, 0]),
