@@ -5,6 +5,7 @@ use std::env;
 use std::fs::File;
 use std::hash::Hash;
 use std::io::prelude::*;
+use std::mem::swap;
 use std::ops::{Add, Mul, Sub};
 
 fn main() -> std::io::Result<()> {
@@ -62,39 +63,34 @@ fn part1(input: &str) {
     }
 
     let mut scanner_data_blocks = EMPTY_LINE_REGEX.split(input);
-    let mut scanner = Scanner {
-        id: 0,
-        position: Coordinate3D([0, 0, 0]),
-        beacons: HashSet::new(),
-    };
+    let mut beacons = HashSet::new();
+
     for beacon_capture in BEACON_REGEX.captures_iter(scanner_data_blocks.next().unwrap()) {
         let beacon_position = Coordinate3D([
             beacon_capture[1].parse().unwrap(),
             beacon_capture[2].parse().unwrap(),
             beacon_capture[3].parse().unwrap(),
         ]);
-        scanner.beacons.insert(beacon_position);
+        beacons.insert(beacon_position);
         absolute_positions.insert(beacon_position);
     }
+    let scanner = Scanner::new(0, Coordinate3D([0, 0, 0]), beacons);
     open_set.push(scanner);
 
     for scanner_data in scanner_data_blocks {
         let scanner_id: u32 = SCANNER_REGEX.captures(scanner_data).unwrap()["scanner"]
             .parse()
             .unwrap();
-        let mut scanner = Scanner {
-            id: scanner_id,
-            position: Coordinate3D([0, 0, 0]),
-            beacons: HashSet::new(),
-        };
+        let mut beacons = HashSet::new();
         for beacon_capture in BEACON_REGEX.captures_iter(scanner_data) {
             let relative_position = Coordinate3D([
                 beacon_capture[1].parse().unwrap(),
                 beacon_capture[2].parse().unwrap(),
                 beacon_capture[3].parse().unwrap(),
             ]);
-            scanner.beacons.insert(relative_position);
+            beacons.insert(relative_position);
         }
+        let scanner = Scanner::new(scanner_id, Coordinate3D([0, 0, 0]), beacons);
         unresolved_set.insert(scanner_id, scanner);
     }
 
@@ -104,10 +100,16 @@ fn part1(input: &str) {
             id,
             Scanner {
                 beacons: relative_beacons,
+                inner_vectors,
                 ..
             },
         ) in unresolved_set.iter()
         {
+            if scanner.inner_vectors.intersection(inner_vectors).count() < 66 {
+                // 12 * (12 - 1) / 2
+                continue;
+            }
+
             'rotations: for rotated_coordinates in rotation_matrices.iter().map(|rotation| {
                 relative_beacons
                     .iter()
@@ -124,6 +126,7 @@ fn part1(input: &str) {
                                 id: *id,
                                 position: offset,
                                 beacons: offset_set,
+                                inner_vectors: inner_vectors.clone(),
                             });
                             break 'rotations;
                         }
@@ -143,12 +146,22 @@ fn part1(input: &str) {
 
     println!("Part 1: {}", absolute_positions.len());
 
-    let manhattan_distance: i32 = closed_set.iter().flat_map(|scanner| closed_set.iter().map(|other| (&scanner.position - other.position).0.into_iter().fold(0, |a, b| a + b.abs()))).max().unwrap();
+    let manhattan_distance: i32 = closed_set
+        .iter()
+        .flat_map(|scanner| {
+            closed_set.iter().map(|other| {
+                (&scanner.position - other.position)
+                    .0
+                    .into_iter()
+                    .fold(0, |a, b| a + b.abs())
+            })
+        })
+        .max()
+        .unwrap();
     println!("Part 2: {}", manhattan_distance);
 }
 
-fn part2(_input: &str) {
-}
+fn part2(_input: &str) {}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 struct Coordinate3D([i32; 3]);
@@ -167,6 +180,20 @@ impl Mul<Coordinate3D> for RotationMatrix3D {
             }
         }
         output
+    }
+}
+
+impl Coordinate3D {
+    fn abs(&self) -> Self {
+        Self([self.0[0].abs(), self.0[1].abs(), self.0[2].abs()])
+    }
+
+    fn normalise(&mut self) {
+        let [mut x, mut y, mut z] = self.0;
+        if x > y {swap(&mut x, &mut y)}
+        if x > z {swap(&mut x, &mut z)}
+        if y > z {swap(&mut y, &mut z)}
+        *self = Self([x, y, z]);
     }
 }
 
@@ -233,6 +260,31 @@ struct Scanner {
     id: u32,
     position: Coordinate3D,
     beacons: HashSet<Coordinate3D>,
+    inner_vectors: HashSet<Coordinate3D>,
+}
+
+impl Scanner {
+    fn new(id: u32, position: Coordinate3D, beacons: HashSet<Coordinate3D>) -> Self {
+        let mut inner_vectors = HashSet::new();
+        for beacon in beacons.iter() {
+            for other in beacons.iter() {
+                if beacon != other {
+                    let mut inner_vector = (beacon - other).abs();
+                    inner_vector.normalise();
+                    inner_vectors.insert(inner_vector);
+                }
+            }
+        }
+        let num_lost_inner_vectors = beacons.len() * (beacons.len() - 1) / 2 - inner_vectors.len();
+        if num_lost_inner_vectors != 0 { println!("Warning: {:?} inner vectors lost from scanner {} due to shadowing", num_lost_inner_vectors, id); }
+
+        Self {
+            id,
+            position,
+            beacons,
+            inner_vectors,
+        }
+    }
 }
 
 impl Hash for Scanner {
