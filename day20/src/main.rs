@@ -77,8 +77,47 @@ fn part1(input: &str) {
                         };
                     }
                 }
-                if (center_y, center_x) == (-1, -1) {
-                    println!("{:09b}: {}", algorithm_index, algorithm[algorithm_index]);
+                if algorithm[algorithm_index] {
+                    new_image.insert((center_y, center_x));
+                }
+            }
+        }
+        image = new_image;
+        y_bounds_of_the_known_world = expanded(&y_bounds_of_the_known_world, 1);
+        x_bounds_of_the_known_world = expanded(&x_bounds_of_the_known_world, 1);
+        terra_incognita_is_lit = if terra_incognita_is_lit {
+            algorithm[0b111111111]
+        } else {
+            algorithm[0b000000000]
+        };
+    }
+
+    println!("Part 1: {}", image.len());
+
+    for _ in 2..50 {
+        let mut new_image = HashSet::<(i32, i32)>::new();
+        for center_y in expanded(&y_bounds_of_the_known_world, 1) {
+            for center_x in expanded(&x_bounds_of_the_known_world, 1) {
+                let mut algorithm_index = 0;
+                for neighbour_y in center_y - 1..=center_y + 1 {
+                    for neighbour_x in center_x - 1..=center_x + 1 {
+                        algorithm_index <<= 1;
+                        algorithm_index |= if y_bounds_of_the_known_world.contains(&neighbour_y)
+                            && x_bounds_of_the_known_world.contains(&neighbour_x)
+                        {
+                            if image.contains(&(neighbour_y, neighbour_x)) {
+                                1
+                            } else {
+                                0
+                            }
+                        } else {
+                            if terra_incognita_is_lit {
+                                1
+                            } else {
+                                0
+                            }
+                        };
+                    }
                 }
                 if algorithm[algorithm_index] {
                     new_image.insert((center_y, center_x));
@@ -93,39 +132,34 @@ fn part1(input: &str) {
         } else {
             algorithm[0b000000000]
         };
-        print_map(&image, &y_bounds_of_the_known_world, &x_bounds_of_the_known_world, terra_incognita_is_lit);
-        println!();
-        println!();
     }
 
-    println!("Part 1: {}", image.len());
+    println!("Part 2: {}", image.len());
 }
 
-fn part2(_input: &str) {
-    println!("Part 2: {}", "");
-}
+fn part2(_input: &str) {}
 
-fn print_map(map: &HashSet<(i32, i32)>, y_bounds: &RangeInclusive<i32>, x_bounds: &RangeInclusive<i32>, terra_incognita_is_lit: bool) {
-    for y in y_bounds.start() -1..=y_bounds.end()+1 {
-        for x in x_bounds.start() -1..=x_bounds.end()+1 {
-            if y_bounds.contains(&y) && x_bounds.contains(&x) {
-            if map.contains(&(y, x)) {
-                print!("#");
-            } else {
-                print!(".");
-            }
-        } else {
-            if terra_incognita_is_lit {
-                print!("#");
-            } else {
-                print!(".");
-            }
-        }
-        }
-        println!();
-    }
-}
+// fn print_map(map: &HashSet<(i32, i32)>, y_bounds: &RangeInclusive<i32>, x_bounds: &RangeInclusive<i32>, terra_incognita_is_lit: bool) {
+//     for y in y_bounds.start() -1..=y_bounds.end()+1 {
+//         for x in x_bounds.start() -1..=x_bounds.end()+1 {
+//             if y_bounds.contains(&y) && x_bounds.contains(&x) {
+//             if map.contains(&(y, x)) {
+//                 print!("#");
+//             } else {
+//                 print!(".");
+//             }
+//         } else {
+//             if terra_incognita_is_lit {
+//                 print!("#");
+//             } else {
+//                 print!(".");
+//             }
+//         }
+//         }
+//         println!();
+//     }
+// }
 
 fn expanded(range: &RangeInclusive<i32>, by: i32) -> RangeInclusive<i32> {
-    range.start() - by..= range.end() + by
+    range.start() - by..=range.end() + by
 }
